@@ -1,14 +1,15 @@
 package com.furiosaming.clusterAnalysis.model;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
 @Data
 @NoArgsConstructor
-public class  Image {
+public class  Image implements Serializable {
+
     private int id;
     private Map<String, Integer> characteristics;
 
