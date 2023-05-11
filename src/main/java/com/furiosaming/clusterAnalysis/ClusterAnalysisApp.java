@@ -1,29 +1,25 @@
 package com.furiosaming.clusterAnalysis;
 
-import com.furiosaming.clusterAnalysis.model.Image;
 import com.furiosaming.clusterAnalysis.model.Cluster;
+import com.furiosaming.clusterAnalysis.model.Image;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
 
 public class ClusterAnalysisApp {
     public static void main(String[] args) {
-        ArrayList<Image> images = convertingFileDataToImages();
-        System.out.println(mergeClustering(4, images));
 
-//        PrintStream out = new PrintStream(new File("output.txt"));
+        ArrayList<Image> images = convertingFileDataToImages();
+        int thresholdValue = Integer.MAX_VALUE;
+        ArrayList<Cluster> clusters = mergeClustering(7, thresholdValue, images);
+        writeToFile(clusters);
     }
 
 
-    public static ArrayList<Cluster> mergeClustering(int requiredClustersNumber, ArrayList<Image> images){
+    public static ArrayList<Cluster> mergeClustering(int requiredClustersNumber, int thresholdValue, ArrayList<Image> images){
         ArrayList<Cluster> clusters = new ArrayList<>();
         int currentClusterID = 0;
         int currentClusterCount = images.size();
-        Set<Cluster> clustersPair = new HashSet<>();
-        int characteristicCount = images.get(0).getCharacteristics().size();
-
 
         for(Image image: images){
             Cluster cluster = new Cluster(currentClusterID);
@@ -32,42 +28,68 @@ public class ClusterAnalysisApp {
             currentClusterID++;
         }
 
+
         while (currentClusterCount > requiredClustersNumber){
 
-            Cluster mergingCluster1 = null;
-            Cluster mergingCluster2 = null;
-            for(int i=0; i<clusters.size()-1; i++){
-                int distance = Integer.MAX_VALUE;
+            int[][] distanceMatrix = new int[clusters.size()][clusters.size()];
+            int distance = Integer.MAX_VALUE;
+
+            Cluster firstMergingCluster = null;
+            Cluster secondMergingCluster = null;
+            for(int i=0; i<clusters.size(); i++){
                 for(int j=0; j<clusters.size(); j++){
                     if(j==i){
+                        distanceMatrix[i][j] = 0;
                         continue;
                     }
                     for(Image first: clusters.get(i).getImages()){
                         for (Image second: clusters.get(j).getImages()){
                             int currentDistance = euclideanDistance(first,
                                     second);
-                            System.out.println(currentDistance);
-                            if(currentDistance < distance){
-                                distance = currentDistance;
-                                mergingCluster1 = clusters.get(i);
-                                mergingCluster2 = clusters.get(j);
-                            }
+                            distanceMatrix[i][j] = currentDistance;
                         }
                     }
-                }
 
+                }
             }
-            if(mergingCluster1 != null && mergingCluster2 != null){
-                mergingCluster1.getImages().addAll(mergingCluster2.getImages());
-                clusters.remove(mergingCluster2);
+            for (int i=0; i<distanceMatrix.length; i++){
+                for (int j=0; j<distanceMatrix.length; j++){
+                    if(j==i){
+                        continue;
+                    }
+                    if((distanceMatrix[i][j] < distance) && (distanceMatrix[i][j] < thresholdValue)){
+                        distance = distanceMatrix[i][j];
+                        firstMergingCluster = clusters.get(i);
+                        secondMergingCluster = clusters.get(j);
+                    }
+                }
+            }
+            if(firstMergingCluster != null && secondMergingCluster != null){
+                firstMergingCluster.getImages().addAll(secondMergingCluster.getImages());
+                clusters.remove(secondMergingCluster);
                 currentClusterCount = clusters.size();
+            }
+            else{
+                break;
             }
         }
 
         return clusters;
     }
 
-    // TODO НУЖНО ДОБАВИТЬ КОСИНУСНОЕ И МЕЖДУ ЦЕНТРАМИ
+
+    public static Integer centersDistanceBetween(Cluster firstCluster, Cluster secondCluster){
+        int distance = 0;
+        for (String key : firstCluster.getCenter().getCharacteristics().keySet()) {
+            Integer v1 = firstCluster.getCenter().getCharacteristics().get(key);
+            Integer v2 = secondCluster.getCenter().getCharacteristics().get(key);
+
+            if (v1 != null && v2 != null) {
+                distance += Math.pow(v1 - v2, 2);
+            }
+        }
+        return distance;
+    }
 
     public static Integer euclideanDistance(Image firstImage, Image secondImage) {
         int distance = 0;
@@ -98,6 +120,19 @@ public class ClusterAnalysisApp {
         return distance;
     }
 
+    public static Double cosineDistance(Image firstImage, Image secondImage){
+        int vectorsScalarProduct = 0;
+        double firstVectorModule = 0;
+        double secondVectorModule = 0;
+        for(int i=0; i<firstImage.getCharacteristics().size(); i++){
+            vectorsScalarProduct += firstImage.getCharacteristics().get(i) * secondImage.getCharacteristics().get(i);
+            firstVectorModule += Math.pow(firstImage.getCharacteristics().get(i), 2);
+            secondVectorModule += Math.pow(secondImage.getCharacteristics().get(i), 2);
+        }
+        return Math.asin(vectorsScalarProduct/(Math.pow(firstVectorModule, 0.5)*(Math.pow(secondVectorModule, 0.5))));
+    }
+
+
     public static ArrayList<Image> convertingFileDataToImages(){
         ArrayList<Image> images = new ArrayList<>();
         try(BufferedReader reader = new BufferedReader(new FileReader(
@@ -125,4 +160,16 @@ public class ClusterAnalysisApp {
         }
         return images;
     }
+
+    public static void writeToFile(ArrayList<Cluster> clusters){
+        try(PrintWriter out = new PrintWriter("result.txt")){
+            for(Cluster cluster: clusters){
+                out.println(cluster);
+            }
+        }
+        catch (IOException io){
+            io.printStackTrace();
+        }
+    }
 }
+
