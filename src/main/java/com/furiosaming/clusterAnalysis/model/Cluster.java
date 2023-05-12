@@ -37,8 +37,8 @@ public class Cluster  implements Serializable {
                     continue;
                 }
                 for (String key : images.get(i).getCharacteristics().keySet()) {
-                    Integer currentImageCharacteristic = images.get(i).getCharacteristics().get(key);
-                    Integer anotherImageCharacteristic = images.get(j).getCharacteristics().get(key);
+                    Double currentImageCharacteristic = images.get(i).getCharacteristics().get(key);
+                    Double anotherImageCharacteristic = images.get(j).getCharacteristics().get(key);
 
                     if (currentImageCharacteristic != null && anotherImageCharacteristic != null) {
                         currentDistance += Math.pow(currentImageCharacteristic - anotherImageCharacteristic, 2);
