@@ -17,7 +17,6 @@ import static com.furiosaming.clusterAnalysis.inputOutput.InputOutput.writeToFil
 public class ClusterAnalysisApp {
     public static void main(String[] args) {
 
-        //TODO добавить нормирование признаков
         // src/main/resources/input/1.txt
 
         Scanner scanner = new Scanner(System.in);
