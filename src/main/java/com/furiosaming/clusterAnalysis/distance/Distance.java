@@ -1,6 +1,5 @@
 package com.furiosaming.clusterAnalysis.distance;
 
-import com.furiosaming.clusterAnalysis.model.Cluster;
 import com.furiosaming.clusterAnalysis.model.Image;
 
 public interface Distance {

@@ -1,50 +1,32 @@
 package com.furiosaming.clusterAnalysis;
 
+import com.furiosaming.clusterAnalysis.distance.Distance;
+import com.furiosaming.clusterAnalysis.enums.TypeOfDistanceCalculation;
+import com.furiosaming.clusterAnalysis.inputOutput.InputOutput;
 import com.furiosaming.clusterAnalysis.model.Cluster;
 import com.furiosaming.clusterAnalysis.model.Image;
+import com.furiosaming.clusterAnalysis.model.ResearchData;
 
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.Scanner;
-
-import static com.furiosaming.clusterAnalysis.distance.Distance.clustersCentersDistance;
-import static com.furiosaming.clusterAnalysis.distance.Distance.euclideanDistance;
-import static com.furiosaming.clusterAnalysis.distance.Distance.cosineDistance;
-import static com.furiosaming.clusterAnalysis.distance.Distance.nearestNeighborsDistance;
-import static com.furiosaming.clusterAnalysis.inputOutput.InputOutput.fileDataToImages;
-import static com.furiosaming.clusterAnalysis.inputOutput.InputOutput.writeToFile;
 
 public class ClusterAnalysisApp {
     public static void main(String[] args) {
 
-        // src/main/resources/input/1.txt
-
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Введите путь к файлу образов:");
-        String fileName = scanner.nextLine();
-        System.out.println("Введите величину порога:");
-        int thresholdValue = scanner.nextInt();
-        System.out.println("Введите ожидаемое число формируемых кластеров:");
-        int requiredClustersNumber = scanner.nextInt();
-        System.out.println("Выберете метод вычисления расстояния:");
-        System.out.println("1. cosineDistance");
-        System.out.println("2. clustersCentersDistance");
-        System.out.println("3. nearestNeighborsDistance");
-        System.out.println("4. euclideanDistance");
-        int distanceType = scanner.nextInt();
-        System.out.println("Нужна ли нормализация? (1/0):");
-        int normalization = scanner.nextInt();
-
-        ArrayList<Image> images = fileDataToImages(fileName, distanceType);
+        /** src/main/resources/input/1.txt **/
         // TODO сделать билдер
-        ArrayList<Cluster> clusters = mergeClustering(requiredClustersNumber, thresholdValue, images, normalization, distanceType);
-        writeToFile(clusters);
+        // TODO внести методы рассчета расстояний в класс ENUM
+        ResearchData researchData = InputOutput.gettingStartDataFromUser();
+        ArrayList<Image> images = InputOutput.fileDataToImages(researchData.getFilePath());
+        ArrayList<Cluster> clusters = mergeClustering(researchData.getRequiredClustersNumber(), researchData.getThresholdValue(),
+                images, researchData.getNormalization(), researchData.getTypeOfDistanceCalculation());
+        InputOutput.writeToFile(clusters);
     }
 
 
-    public static ArrayList<Cluster> mergeClustering(int requiredClustersNumber, int thresholdValue, ArrayList<Image> images, int normalization, int distanceType){
+    public static ArrayList<Cluster> mergeClustering(int requiredClustersNumber, int thresholdValue, ArrayList<Image> images,
+                                                     int normalization, TypeOfDistanceCalculation typeOfDistanceCalculation){
         if(normalization == 1){
-            normalization(images);
+            ResearchData.normalization(images);
         }
         ArrayList<Cluster> clusters = new ArrayList<>();
         int currentClusterID = 0;
@@ -53,7 +35,7 @@ public class ClusterAnalysisApp {
         for(Image image: images){
             Cluster cluster = new Cluster(currentClusterID);
             // может эту логику внести в класс?
-            if(distanceType == 2){
+            if(typeOfDistanceCalculation == TypeOfDistanceCalculation.CLUSTERS_CENTERS_DISTANCE){
                 cluster.addImageWithCenterComputing(image);
             }
             else{
@@ -77,24 +59,25 @@ public class ClusterAnalysisApp {
                         distanceMatrix[i][j] = 0;
                         continue;
                     }
-                    if(distanceType == 2){
-                        distanceMatrix[i][j] = clustersCentersDistance(clusters.get(i).getCenter(), clusters.get(j).getCenter());
+                    if(typeOfDistanceCalculation == TypeOfDistanceCalculation.CLUSTERS_CENTERS_DISTANCE){
+                        distanceMatrix[i][j] = Distance.clustersCentersDistance(clusters.get(i).getCenter(), clusters.get(j).getCenter());
                     }
                     else{
                         for(Image first: clusters.get(i).getImages()){
                             for (Image second: clusters.get(j).getImages()){
                                 double currentDistance = 0;
-                                if(distanceType == 1){
-                                    currentDistance = cosineDistance(first,
-                                            second);
-                                }
-                                else if(distanceType == 3){
-                                    currentDistance = nearestNeighborsDistance(first, second);
-                                }
-                                else if(distanceType == 4){
-                                    currentDistance = euclideanDistance(first,
-                                            second);
-                                }
+                                currentDistance = TypeOfDistanceCalculation.calculateDistance(first, second, typeOfDistanceCalculation);
+//                                if(typeOfDistanceCalculation == TypeOfDistanceCalculation.COSINE_DISTANCE){
+//                                    currentDistance = Distance.cosineDistance(first,
+//                                            second);
+//                                }
+//                                else if(typeOfDistanceCalculation == TypeOfDistanceCalculation.NEAREST_NEIGHBORS_DISTANCE){
+//                                    currentDistance = Distance.nearestNeighborsDistance(first, second);
+//                                }
+//                                else if(typeOfDistanceCalculation == TypeOfDistanceCalculation.EUCLIDEAN_DISTANCE){
+//                                    currentDistance = Distance.euclideanDistance(first,
+//                                            second);
+//                                }
                                 distanceMatrix[i][j] = currentDistance;
                             }
                         }
@@ -114,7 +97,7 @@ public class ClusterAnalysisApp {
                 }
             }
             if(firstMergingCluster != null && secondMergingCluster != null){
-                if(distanceType == 2){
+                if(typeOfDistanceCalculation == TypeOfDistanceCalculation.CLUSTERS_CENTERS_DISTANCE){
                     for(Image image: secondMergingCluster.getImages()){
                         firstMergingCluster.addImageWithCenterComputing(image);
                     }
@@ -130,19 +113,6 @@ public class ClusterAnalysisApp {
             }
         }
         return clusters;
-    }
-
-//куда его прибрать?
-    public static void normalization(ArrayList<Image> images){
-        for(Image image: images){
-            double vectorLength = 0;
-            for(double value : image.getCharacteristics().values()){
-                vectorLength+=value;
-            }
-            for (Map.Entry<String, Double> entry : image.getCharacteristics().entrySet()) {
-                entry.setValue(entry.getValue()/vectorLength);
-            }
-        }
     }
 }
 
