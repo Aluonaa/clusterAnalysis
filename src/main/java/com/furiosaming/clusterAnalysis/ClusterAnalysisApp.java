@@ -11,10 +11,7 @@ import java.util.ArrayList;
 
 public class ClusterAnalysisApp {
     public static void main(String[] args) {
-
         /** src/main/resources/input/1.txt **/
-        // TODO сделать билдер
-        // TODO внести методы рассчета расстояний в класс ENUM
         ResearchData researchData = InputOutput.gettingStartDataFromUser();
         ArrayList<Image> images = InputOutput.fileDataToImages(researchData.getFilePath());
         ArrayList<Cluster> clusters = mergeClustering(researchData.getRequiredClustersNumber(), researchData.getThresholdValue(),
@@ -45,11 +42,10 @@ public class ClusterAnalysisApp {
             currentClusterID++;
         }
 
-
         while (currentClusterCount > requiredClustersNumber){
 
             double[][] distanceMatrix = new double[clusters.size()][clusters.size()];
-            double distance = Double.MAX_VALUE;
+            double minDistance = Double.MAX_VALUE;
 
             Cluster firstMergingCluster = null;
             Cluster secondMergingCluster = null;
@@ -59,43 +55,16 @@ public class ClusterAnalysisApp {
                         distanceMatrix[i][j] = 0;
                         continue;
                     }
-                    if(typeOfDistanceCalculation == TypeOfDistanceCalculation.CLUSTERS_CENTERS_DISTANCE){
-                        distanceMatrix[i][j] = Distance.clustersCentersDistance(clusters.get(i).getCenter(), clusters.get(j).getCenter());
-                    }
-                    else{
-                        for(Image first: clusters.get(i).getImages()){
-                            for (Image second: clusters.get(j).getImages()){
-                                double currentDistance = 0;
-                                currentDistance = TypeOfDistanceCalculation.calculateDistance(first, second, typeOfDistanceCalculation);
-//                                if(typeOfDistanceCalculation == TypeOfDistanceCalculation.COSINE_DISTANCE){
-//                                    currentDistance = Distance.cosineDistance(first,
-//                                            second);
-//                                }
-//                                else if(typeOfDistanceCalculation == TypeOfDistanceCalculation.NEAREST_NEIGHBORS_DISTANCE){
-//                                    currentDistance = Distance.nearestNeighborsDistance(first, second);
-//                                }
-//                                else if(typeOfDistanceCalculation == TypeOfDistanceCalculation.EUCLIDEAN_DISTANCE){
-//                                    currentDistance = Distance.euclideanDistance(first,
-//                                            second);
-//                                }
-                                distanceMatrix[i][j] = currentDistance;
-                            }
-                        }
-                    }
-                }
-            }
-            for (int i=0; i<distanceMatrix.length; i++){
-                for (int j=0; j<distanceMatrix.length; j++){
-                    if(j==i){
-                        continue;
-                    }
-                    if((distanceMatrix[i][j] < distance) && (distanceMatrix[i][j] < thresholdValue)){
-                        distance = distanceMatrix[i][j];
+                    distanceMatrix[i][j] = Distance.calculateDistance(clusters.get(i), clusters.get(j),
+                            typeOfDistanceCalculation);
+                    if((distanceMatrix[i][j] < minDistance) && (distanceMatrix[i][j] < thresholdValue)){
+                        minDistance = distanceMatrix[i][j];
                         firstMergingCluster = clusters.get(i);
                         secondMergingCluster = clusters.get(j);
                     }
                 }
             }
+
             if(firstMergingCluster != null && secondMergingCluster != null){
                 if(typeOfDistanceCalculation == TypeOfDistanceCalculation.CLUSTERS_CENTERS_DISTANCE){
                     for(Image image: secondMergingCluster.getImages()){
